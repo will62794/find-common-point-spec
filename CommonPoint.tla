@@ -2,7 +2,9 @@
 EXTENDS Integers, Naturals, Sequences
 
 \*
-\* Find the rollback common point.
+\* Finding the rollback common point.
+\*
+\* The algorithm is reminiscent of the 'merge' step of merge sort, which is used to merge two sorted lists.
 \*
 
 CONSTANT Nil
@@ -31,12 +33,7 @@ StepBackInRemoteLog ==
 StepBackInEitherLog == 
     \* If timestamps of current entries in both logs are equal, then it's possible
     \* we've found the common point. It's also possible, though, that we just happened
-    \* to run into two identical timestamps with differing terms. In reality, we would 
-    \* need to have a term value to know whether this is really the common point or not. 
-    \* For the sake of this simple spec, though, we just assume that all entries past the 
-    \* common point in each logs have different terms, so if we find two identical timestamps 
-    \* past the common point, then we assume it's not a real common point and step back in either one 
-    \* of the logs.
+    \* to run into two identical timestamps with differing terms.
     /\ localLog[localLogIndex].ts = remoteLog[remoteLogIndex].ts
     /\ localLog[localLogIndex].term # remoteLog[remoteLogIndex].term
     \* Step back in either log. We could pick an aribtrary log, but this makes the spec more general.
@@ -51,12 +48,11 @@ FindCommonPoint ==
     /\ commonPoint' = localLog[localLogIndex]
     /\ UNCHANGED <<localLog, remoteLog, localLogIndex, remoteLogIndex>>
  
- 
 \*
 \* Define initial states.
 \*  
 
-MaxLogLength == 3
+MaxLogLength == 4
 Timestamps == 1..6 \* the set of all possible timestamps.
 
 \* The set of all timestamp sequences. 
@@ -98,7 +94,6 @@ NeverStepBackwardsOffLog ==
     /\ ENABLED StepBackInRemoteLog => remoteLogIndex > 1
     /\ ENABLED StepBackInEitherLog => localLogIndex > 1 /\ remoteLogIndex > 1
 
-
 \* If there is a timestamp T that appears in both logs, then it is true that there must be a state
 \* in the behavior where both log pointers are pointing to this timestamp in their respective logs.
 \* 
@@ -118,7 +113,19 @@ LogPointersAlignAtCommonTimestamp ==
         <> (/\ localLogIndex = i 
             /\ remoteLogIndex = j)
             
+
+
+(**************************************************************************************************)
+(* Let timestamp T be a timestamp shared between both logs.  If pointer A is the first pointer to *)
+(* reach T in its own log, then it must be the case that pointer B is pointing to a timestamp     *)
+(* greater than T, since it has not yet reached T and timestamps are monotonic in a log.  So,     *)
+(* once the first pointer reaches A, the other pointer must be decremented continuously (because  *)
+(* it is pointing at timestamps greater than T) until it reaches T in its own log.  I think this  *)
+(* is the direction of a proof that pointers always align at a timestamp that is common between   *)
+(* their logs.                                                                                    *)
+(**************************************************************************************************)
+            
 ====================================================================================================
 \* Modification History
-\* Last modified Fri Jul 12 13:24:54 EDT 2019 by williamschultz
+\* Last modified Fri Jul 12 15:27:49 EDT 2019 by williamschultz
 \* Created Tue Jul 09 13:04:07 EDT 2019 by williamschultz
